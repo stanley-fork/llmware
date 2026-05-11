@@ -7703,7 +7703,22 @@ class ONNXQNNGenerativeModel(BaseModel):
             # get npu optimized onnxruntime with qnn
             set_for_npu_qnn = True
 
-        # uses global onnxruntime_genai - constructing model from config
+        # starting with onnxruntime-qnn 2.0, need to set qnn execution provider path
+        # e.g., path to "onnxruntime_providers_qnn.dll"
+
+        qnn_path = os.environ.get("qnn_onnx_path","")
+        if not qnn_path:
+            # by default, look in the onnxruntime_qnn package
+            import onnxruntime_qnn
+            backend_path = os.path.dirname(onnxruntime_qnn.__file__)
+            qnn_path = os.path.join(backend_path, "onnxruntime_providers_qnn.dll")
+
+        # register the backend
+        og.register_execution_provider_library("QNNExecutionProvider", qnn_path)
+
+        logger.info(f"ONNXQNNGenerativeModel - load_model_for_inference - qnn path - {qnn_path}")
+
+        # use global onnxruntime_genai - constructing model from config
         config = og.Config(onnx_model_path)
         self.model = og.Model(config)
 
